@@ -32,6 +32,9 @@ jobs:
         env:
           CGO_ENABLED: '0'
 
+      # ----------------------------
+      # 上传原版
+      # ----------------------------
       - name: Prepare original binaries
         run: |
           mkdir -p release/original
@@ -43,14 +46,17 @@ jobs:
           name: mosdns-original
           path: ./release/original/*
 
-      - name: UPX compress binaries
-        run: |
-          find ./release/mosdns* -type f -exec upx --best --lzma {} \;
-
-      - name: Prepare UPX binaries
+      # ----------------------------
+      # 创建独立副本用于 UPX 压缩
+      # ----------------------------
+      - name: Prepare UPX copy
         run: |
           mkdir -p release/upx
           cp ./release/mosdns* release/upx/
+
+      - name: UPX compress binaries
+        run: |
+          find ./release/upx -type f -name "mosdns*" -exec upx --best --lzma {} \;
 
       - name: Upload UPX binaries
         uses: actions/upload-artifact@v4
