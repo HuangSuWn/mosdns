@@ -27,18 +27,15 @@ jobs:
       - name: Install UPX
         run: sudo apt-get update && sudo apt-get install -y upx
 
-      - name: Build
-        run: python ./release.py
-        env:
-          CGO_ENABLED: '0'
-
       # ----------------------------
-      # 上传原版
+      # Build 原版二进制到独立目录
       # ----------------------------
-      - name: Prepare original binaries
+      - name: Build original binaries
         run: |
           mkdir -p release/original
-          cp ./release/mosdns* release/original/
+          python ./release.py --output-dir release/original
+        env:
+          CGO_ENABLED: '0'
 
       - name: Upload original binaries
         uses: actions/upload-artifact@v4
@@ -47,16 +44,16 @@ jobs:
           path: ./release/original/*
 
       # ----------------------------
-      # 创建独立副本用于 UPX 压缩
+      # UPX 压缩到另一个独立目录
       # ----------------------------
-      - name: Prepare UPX copy
+      - name: Prepare UPX binaries
         run: |
           mkdir -p release/upx
-          cp ./release/mosdns* release/upx/
+          cp release/original/* release/upx/
 
       - name: UPX compress binaries
         run: |
-          find ./release/upx -type f -name "mosdns*" -exec upx --best --lzma {} \;
+          find release/upx -type f -name "mosdns*" -exec upx --best --lzma {} \;
 
       - name: Upload UPX binaries
         uses: actions/upload-artifact@v4
