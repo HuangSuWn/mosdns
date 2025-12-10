@@ -5,29 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag (e.g. v1.0.0)'
-        required: true
-        type: string
 
 jobs:
   build-release:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v6
-
-      # 如果是 workflow_dispatch：创建 tag
-      - name: Create tag if manual trigger
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          echo "Creating tag: ${{ inputs.tag }}"
-          git tag ${{ inputs.tag }}
-          git push origin ${{ inputs.tag }}
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -41,15 +24,19 @@ jobs:
           python-version: '3.14'
           check-latest: true
 
+      - name: Install UPX
+        run: sudo apt-get update && sudo apt-get install -y upx
+
       - name: Build
         run: python ./release.py
         env:
           CGO_ENABLED: '0'
 
-      - name: Publish
-        uses: softprops/action-gh-release@v2
-        with:
-          files: './release/mosdns*.zip'
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: UPX compress binaries
+        run: |
+          find ./release -maxdepth 2 -type f -name "mosdns*" -exec upx --best --lzma {} \;
+
+      - name: Create ZIP package
+        run: |
+          cd release
+          zip -r mosdns-output.zip ./*
