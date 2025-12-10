@@ -25,38 +25,24 @@ jobs:
           check-latest: true
 
       - name: Install UPX
-        run: sudo apt-get update && sudo apt-get install -y upx
+        run: sudo apt-get update && sudo apt-get install -y upx zip
 
-      # ----------------------------
-      # Build 原版二进制到独立目录
-      # ----------------------------
-      - name: Build original binaries
-        run: |
-          mkdir -p release/original
-          python ./release.py --output-dir release/original
+      - name: Build
+        run: python ./release.py
         env:
           CGO_ENABLED: '0'
 
-      - name: Upload original binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: mosdns-original
-          path: ./release/original/*
-
-      # ----------------------------
-      # UPX 压缩到另一个独立目录
-      # ----------------------------
-      - name: Prepare UPX binaries
-        run: |
-          mkdir -p release/upx
-          cp release/original/* release/upx/
-
       - name: UPX compress binaries
         run: |
-          find release/upx -type f -name "mosdns*" -exec upx --best --lzma {} \;
+          find ./release -maxdepth 2 -type f -name "mosdns*" -exec upx --best --lzma {} \;
 
-      - name: Upload UPX binaries
+      - name: Create ZIP package
+        run: |
+          cd release
+          zip -r mosdns-output.zip ./*
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mosdns-upx
-          path: ./release/upx/*
+          name: mosdns
+          path: ./release/mosdns-output.zip
